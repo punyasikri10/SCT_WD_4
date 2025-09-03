@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>✨ To-Do Web App ✨</title>
+  <!-- Tailwind CSS (Play CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* small bounce for cards on hover */
+    .hover\:scale-102:hover { transform: scale(1.02); }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-300 p-4 transition-colors duration-500">
+  <div id="app" class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-5xl font-extrabold text-white drop-shadow-lg animate-pulse">
+        ✨ To-Do Web App ✨
+      </h1>
+      <button id="toggleDark" class="p-3 bg-white/20 rounded-full shadow-lg backdrop-blur-lg border border-white/30 hover:scale-110 transition-transform">
+        <i data-lucide="moon" class="text-purple-700"></i>
+      </button>
+    </div>
+    <p class="text-white/80 text-lg mb-8 text-center italic">
+      "Stay organized, stay fabulous! 🌸✨"
+    </p>
+
+    <!-- Stats Dashboard -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div class="bg-white/30 backdrop-blur-lg rounded-2xl p-6 text-center border border-white/30 shadow-lg">
+        <div id="totalTasks" class="text-3xl font-bold text-pink-700">0</div>
+        <div class="text-purple-700">Total Tasks</div>
+      </div>
+      <div class="bg-white/30 backdrop-blur-lg rounded-2xl p-6 text-center border border-white/30 shadow-lg">
+        <div id="completedCount" class="text-3xl font-bold text-green-600">0</div>
+        <div class="text-purple-700">Completed</div>
+      </div>
+      <div class="bg-white/30 backdrop-blur-lg rounded-2xl p-6 text-center border border-white/30 shadow-lg">
+        <div id="remainingCount" class="text-3xl font-bold text-red-500">0</div>
+        <div class="text-purple-700">Remaining</div>
+      </div>
+    </div>
+
+    <!-- Add Task Form -->
+    <div class="bg-white/20 backdrop-blur-lg rounded-2xl p-6 mb-6 border border-white/30 shadow-lg">
+      <div class="flex flex-col gap-4">
+        <div class="flex gap-2">
+          <input id="taskInput" type="text" placeholder="Add a task ✍️" class="flex-1 px-4 py-3 rounded-xl bg-white/40 border border-white/50 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-400" />
+          <button id="addBtn" class="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl shadow-md hover:scale-105 transition-transform">
+            <i data-lucide="plus" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="flex gap-2">
+          <input id="dateInput" type="date" class="flex-1 px-4 py-2 rounded-xl bg-white/40 border border-white/50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-400" />
+          <input id="timeInput" type="time" class="flex-1 px-4 py-2 rounded-xl bg-white/40 border border-white/50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-400" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex flex-wrap gap-2 mb-6 justify-center">
+      <button data-filter="all" class="filter-btn px-6 py-2 rounded-full shadow-md transition-all duration-300 transform hover:scale-105 bg-pink-500 text-white">All</button>
+      <button data-filter="pending" class="filter-btn px-6 py-2 rounded-full shadow-md transition-all duration-300 transform hover:scale-105 bg-white/40 text-gray-700 hover:bg-pink-100">Pending</button>
+      <button data-filter="completed" class="filter-btn px-6 py-2 rounded-full shadow-md transition-all duration-300 transform hover:scale-105 bg-white/40 text-gray-700 hover:bg-pink-100">Completed</button>
+      <button data-filter="priority" class="filter-btn px-6 py-2 rounded-full shadow-md transition-all duration-300 transform hover:scale-105 bg-white/40 text-gray-700 hover:bg-pink-100">Priority</button>
+    </div>
+
+    <!-- Tasks List -->
+    <div id="tasksList" class="space-y-3"></div>
+
+    <!-- Footer -->
+    <div id="footerMsg" class="text-center mt-8 text-purple-700 hidden"></div>
+  </div>
+
+  <script>
+    // --- State ---
+    let tasks = JSON.parse(localStorage.getItem('tasks-queenie')) || [];
+    let filter = 'all';
+    let darkMode = JSON.parse(localStorage.getItem('todo-dark-mode')) || false;
+
+    // --- Elements ---
+    const taskInput = document.getElementById('taskInput');
+    const dateInput = document.getElementById('dateInput');
+    const timeInput = document.getElementById('timeInput');
+    const addBtn = document.getElementById('addBtn');
+    const tasksList = document.getElementById('tasksList');
+    const totalTasksEl = document.getElementById('totalTasks');
+    const completedCountEl = document.getElementById('completedCount');
+    const remainingCountEl = document.getElementById('remainingCount');
+    const footerMsg = document.getElementById('footerMsg');
+    const toggleDark = document.getElementById('toggleDark');
+    const app = document.body; // toggle classes on body
+
+    // --- Init ---
+    function initTheme() {
+      if (darkMode) {
+        app.classList.remove('bg-gradient-to-br','from-pink-300','via-purple-300','to-indigo-300');
+        app.classList.add('bg-gray-900');
+        toggleDark.innerHTML = '<i data-lucide="sun" class="text-yellow-300"></i>';
+      } else {
+        app.classList.add('bg-gradient-to-br','from-pink-300','via-purple-300','to-indigo-300');
+        app.classList.remove('bg-gray-900');
+        toggleDark.innerHTML = '<i data-lucide="moon" class="text-purple-700"></i>';
+      }
+      lucide.createIcons();
+    }
+
+    function save() {
+      localStorage.setItem('tasks-queenie', JSON.stringify(tasks));
+      localStorage.setItem('todo-dark-mode', JSON.stringify(darkMode));
+    }
+
+    // --- Actions ---
+    function addTask() {
+      const text = taskInput.value.trim();
+      if (!text) return;
+      const task = {
+        id: Date.now(),
+        text,
+        completed: false,
+        date: dateInput.value,
+        time: timeInput.value,
+        priority: false,
+        createdAt: new Date().toISOString()
+      };
+      tasks = [task, ...tasks];
+      taskInput.value = '';
+      dateInput.value = '';
+      timeInput.value = '';
+      save();
+      render();
+    }
+
+    function toggleComplete(id) {
+      tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+      save();
+      render();
+    }
+
+    function togglePriority(id) {
+      tasks = tasks.map(t => t.id === id ? { ...t, priority: !t.priority } : t);
+      save();
+      render();
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      save();
+      render();
+    }
+
+    function startEdit(id) {
+      const row = document.querySelector(`[data-id="${id}"]`);
+      const textEl = row.querySelector('.task-text');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = textEl.textContent.trim();
+      input.className = 'w-full px-3 py-1 rounded-lg bg-white/40 border border-white/50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-400';
+      textEl.replaceWith(input);
+      input.focus();
+      input.addEventListener('blur', () => saveEdit(id, input.value));
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveEdit(id, input.value); });
+    }
+
+    function saveEdit(id, text) {
+      const trimmed = text.trim();
+      if (trimmed) {
+        tasks = tasks.map(t => t.id === id ? { ...t, text: trimmed } : t);
+        save();
+        render();
+      } else {
+        render();
+      }
+    }
+
+    // --- Filters ---
+    function setFilter(value) {
+      filter = value;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.filter === value) {
+          btn.classList.remove('bg-white/40','text-gray-700','hover:bg-pink-100');
+          btn.classList.add('bg-pink-500','text-white');
+        } else {
+          btn.classList.remove('bg-pink-500','text-white');
+          btn.classList.add('bg-white/40','text-gray-700','hover:bg-pink-100');
+        }
+      });
+      render();
+    }
+
+    // --- Render ---
+    function getFilteredTasks() {
+      if (filter === 'completed') return tasks.filter(t => t.completed);
+      if (filter === 'pending') return tasks.filter(t => !t.completed);
+      if (filter === 'priority') return tasks.filter(t => t.priority);
+      return tasks;
+    }
+
+    function updateStats() {
+      const total = tasks.length;
+      const completed = tasks.filter(t => t.completed).length;
+      totalTasksEl.textContent = total;
+      completedCountEl.textContent = completed;
+      remainingCountEl.textContent = total - completed;
+
+      if (total > 0) {
+        footerMsg.classList.remove('hidden');
+        footerMsg.textContent = completed === total
+          ? '🎊 Yay Queenie! You completed everything! 🎊'
+          : `Keep going! ${total - completed} cute task${(total - completed) !== 1 ? 's' : ''} left ✨`;
+      } else {
+        footerMsg.classList.add('hidden');
+      }
+    }
+
+    function taskRow(t, index) {
+      return `
+        <div data-id="${t.id}" class="group bg-white/30 backdrop-blur-lg rounded-2xl p-4 border border-white/30 shadow-lg transform transition-all duration-500 hover:scale-105 ${t.completed ? 'opacity-70' : ''}" style="animation-delay: ${index * 100}ms;">
+          <div class="flex items-center gap-4">
+            <button class="priority-btn transition-all duration-300 transform hover:scale-125 ${t.priority ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}">
+              <i data-lucide="star" class="w-5 h-5 ${t.priority ? 'fill-current' : ''}"></i>
+            </button>
+            <button class="complete-btn w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 transform hover:scale-110 ${t.completed ? 'bg-green-500 border-green-500' : 'border-gray-400 hover:border-green-400'}">
+              ${t.completed ? '<i data-lucide="check" class="w-4 h-4 text-white"></i>' : ''}
+            </button>
+            <div class="flex-1">
+              <div class="space-y-1">
+                <div class="task-text text-gray-900 font-medium transition-all duration-300 ${t.completed ? 'line-through opacity-60' : ''}">${t.text.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>
+                ${(t.date || t.time) ? `
+                  <div class="flex items-center gap-3 text-purple-700 text-sm">
+                    ${t.date ? `<div class="flex items-center gap-1"><i data-lucide="calendar" class="w-4 h-4"></i>${t.date}</div>` : ''}
+                    ${t.time ? `<div class="flex items-center gap-1"><i data-lucide="clock" class="w-4 h-4"></i>${t.time}</div>` : ''}
+                  </div>` : ''}
+              </div>
+            </div>
+            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <button class="edit-btn p-2 text-purple-500 hover:text-purple-700 hover:bg-white/40 rounded-lg transition-all duration-300">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+              </button>
+              <button class="delete-btn p-2 text-red-500 hover:text-red-700 hover:bg-white/40 rounded-lg transition-all duration-300">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function render() {
+      const data = getFilteredTasks();
+      if (data.length === 0) {
+        tasksList.innerHTML = `
+          <div class="text-center py-12">
+            <div class="text-6xl mb-4">🌸</div>
+            <div class="text-xl text-white">${filter === 'all' ? 'No tasks yet! Start something 💜' : `No ${filter} tasks found!`}</div>
+          </div>`;
+      } else {
+        tasksList.innerHTML = data.map(taskRow).join('');
+      }
+
+      // Activate icons
+      lucide.createIcons();
+
+      // Wire up row buttons after render
+      document.querySelectorAll('#tasksList [data-id]').forEach(row => {
+        const id = Number(row.dataset.id);
+        row.querySelector('.priority-btn').addEventListener('click', () => togglePriority(id));
+        row.querySelector('.complete-btn').addEventListener('click', () => toggleComplete(id));
+        row.querySelector('.edit-btn').addEventListener('click', () => startEdit(id));
+        row.querySelector('.delete-btn').addEventListener('click', () => deleteTask(id));
+      });
+
+      updateStats();
+    }
+
+    // --- Events ---
+    addBtn.addEventListener('click', addTask);
+    taskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => setFilter(btn.dataset.filter));
+    });
+
+    toggleDark.addEventListener('click', () => {
+      darkMode = !darkMode;
+      if (darkMode) {
+        document.body.classList.remove('bg-gradient-to-br','from-pink-300','via-purple-300','to-indigo-300');
+        document.body.classList.add('bg-gray-900');
+        toggleDark.innerHTML = '<i data-lucide="sun" class="text-yellow-300"></i>';
+      } else {
+        document.body.classList.add('bg-gradient-to-br','from-pink-300','via-purple-300','to-indigo-300');
+        document.body.classList.remove('bg-gray-900');
+        toggleDark.innerHTML = '<i data-lucide\="moon" class="text-purple-700"></i>';
+      }
+      lucide.createIcons();
+      save();
+    });
+
+    // First paint
+    initTheme();
+    render();
+  </script>
+</body>
+</html>
